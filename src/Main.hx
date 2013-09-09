@@ -65,7 +65,7 @@ class Field
         var cells = new Array<Cell>();
         for (row in 0...x) {
             for (col in 0...y) {
-                cells.push(new Cell(this, row, col));
+                cells.push(new Cell(this, row, col, (Std.random(2) < 0.5)));
             }
         }
         return cells;
@@ -83,11 +83,12 @@ class Cell
     public var column(default, null): Int;
     public var bomb(default, null): Bool;
 
-    public function new(field: Field, row, column)
+    public function new(field: Field, row, column, bomb)
     {
         this.field = field;
         this.row = row;
         this.column = column;
+        this.bomb = bomb;
 
         this.myshape = this.initialize_shape(field);
     }
