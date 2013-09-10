@@ -6,6 +6,7 @@ import Enumerator;
 
 import createjs.easeljs.Shape;
 import createjs.easeljs.MouseEvent;
+import createjs.easeljs.ColorFilter; // Colorfilter is not contained minified version
 import createjs.easeljs.Stage;
 import createjs.easeljs.Ticker;
 
@@ -65,7 +66,7 @@ class Field
         var cells = new Array<Cell>();
         for (row in 0...x) {
             for (col in 0...y) {
-                cells.push(new Cell(this, row, col, (Std.random(2) < 0.5)));
+                cells.push(new Cell(this, row, col, (Std.random(2) < 0.5))); // 最大数とか考慮するのは後で
             }
         }
         return cells;
@@ -103,8 +104,38 @@ class Cell
             .endFill()
             ;
         myshape.onClick = function(e: MouseEvent) {
+            if (this.bomb)
+            {
+                trace("cabooom!");
+                return;
+            }
             // こ↑こ↓
-            trace('red: x = ${Std.string(e.stageX)} y = ${Std.string(e.stageY)}');
+            var neighbors = this.get_neighbors();
+            var cell_status = CellStatuses.get_status(neighbors.has_bomb.length);
+            trace('${neighbors.has_bomb.length} bomb');
+            if (cell_status.equals(CellStatus.Zero(0)))
+            {
+                // TODO: 連鎖部分は後で
+            }
+            else
+            {
+                var bi = switch (cell_status) {
+                    case One(v): v / 10;
+                    case Two(v): v / 10;
+                    case Three(v): v / 10;
+                    case Four(v): v / 10;
+                    case Five(v): v / 10;
+                    case Six(v): v / 10;
+                    case Seven(v): v / 10;
+                    case Eight(v): v / 10;
+                    case _: 1;
+                }
+                var matrix = new ColorFilter(bi, bi, bi, 1);
+                var s = this.myshape;
+                s.filters = [matrix];
+                s.cache(s.x, s.y, Field.size_of_cells - 1, Field.size_of_cells - 1);
+            }
+            trace(e.stageX);
         }
         field.stage.addChild(myshape);
         return myshape;
@@ -147,6 +178,39 @@ class Utils
         return {
             row_indexes: lower_row_bound...upper_row_bound + 1
             , col_indexes: lower_column_bound...upper_column_bound + 1
+        }
+    }
+}
+
+
+enum CellStatus
+{
+    Zero(i: Int);
+    One(i: Int);
+    Two(i: Int);
+    Three(i: Int);
+    Four(i: Int);
+    Five(i: Int);
+    Six(i: Int);
+    Seven(i: Int);
+    Eight(i: Int);
+}
+
+class CellStatuses
+{
+    public static function get_status(num_of_bombs: Int): CellStatus
+    {
+        return switch (num_of_bombs) {
+            case 0: Zero(0);
+            case 1: One(0);
+            case 2: Two(10);
+            case 3: Three(40);
+            case 4: Four(70);
+            case 5: Five(100);
+            case 6: Six(130);
+            case 7: Seven(160);
+            case 8: Eight(180);
+            case _: throw 'error';
         }
     }
 }
