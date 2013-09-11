@@ -2,7 +2,7 @@
 -cp src
 -js static/js/main.js
 -main Main
--dce full
+#-dce full
 -debug
 
 #--next

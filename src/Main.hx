@@ -8,6 +8,7 @@ import createjs.easeljs.Shape;
 import createjs.easeljs.MouseEvent;
 import createjs.easeljs.ColorFilter; // Colorfilter is not contained minified version
 import createjs.easeljs.Stage;
+import createjs.easeljs.Text;
 import createjs.easeljs.Ticker;
 
 
@@ -106,7 +107,10 @@ class Cell
         myshape.onClick = function(e: MouseEvent) {
             if (this.bomb)
             {
-                trace("cabooom!");
+                var show_bomb = new Text('B!', '11px Monaco', '#ffffff');
+                show_bomb.x = e.stageX;
+                show_bomb.y = e.stageY;
+                this.field.stage.addChild(show_bomb);
                 return;
             }
             // こ↑こ↓
@@ -119,21 +123,21 @@ class Cell
             }
             else
             {
-                var bi = switch (cell_status) {
-                    case One(v): v / 10;
-                    case Two(v): v / 10;
-                    case Three(v): v / 10;
-                    case Four(v): v / 10;
-                    case Five(v): v / 10;
-                    case Six(v): v / 10;
-                    case Seven(v): v / 10;
-                    case Eight(v): v / 10;
-                    case _: 1;
-                }
-                var matrix = new ColorFilter(bi, bi, bi, 1);
-                var s = this.myshape;
-                s.filters = [matrix];
-                s.cache(s.x, s.y, Field.size_of_cells - 1, Field.size_of_cells - 1);
+                var bi = new Text(
+                    switch (cell_status) {
+                        case One(v): Std.string(v);
+                        case Two(v): Std.string(v);
+                        case Three(v): Std.string(v);
+                        case Four(v): Std.string(v);
+                        case Five(v): Std.string(v);
+                        case Six(v): Std.string(v);
+                        case Seven(v): Std.string(v);
+                        case Eight(v): Std.string(v);
+                        case _: "b";
+                    }, '11px Monaco', '#ffffff');
+                bi.x = e.stageX;
+                bi.y = e.stageY;
+                this.field.stage.addChild(bi);
             }
             trace(e.stageX);
         }
@@ -202,14 +206,14 @@ class CellStatuses
     {
         return switch (num_of_bombs) {
             case 0: Zero(0);
-            case 1: One(0);
-            case 2: Two(10);
-            case 3: Three(40);
-            case 4: Four(70);
-            case 5: Five(100);
-            case 6: Six(130);
-            case 7: Seven(160);
-            case 8: Eight(180);
+            case 1: One(1);
+            case 2: Two(2);
+            case 3: Three(3);
+            case 4: Four(4);
+            case 5: Five(5);
+            case 6: Six(6);
+            case 7: Seven(7);
+            case 8: Eight(8);
             case _: throw 'error';
         }
     }
