@@ -113,10 +113,8 @@ class Cell
                 this.field.stage.addChild(show_bomb);
                 return;
             }
-            // こ↑こ↓
             var neighbors = this.get_neighbors();
             var cell_status = CellStatuses.get_status(neighbors.has_bomb.length);
-            trace('${neighbors.has_bomb.length} bomb');
             if (cell_status.equals(CellStatus.Zero(0)))
             {
                 // TODO: 連鎖部分は後で
@@ -139,7 +137,6 @@ class Cell
                 bi.y = e.stageY;
                 this.field.stage.addChild(bi);
             }
-            trace(e.stageX);
         }
         field.stage.addChild(myshape);
         return myshape;
@@ -147,19 +144,30 @@ class Cell
 
     private function get_neighbors(): {has_bomb: Array<Cell>, no_bomb: Array<Cell>}
     {
+        var this_row_i = this.row;
+        var this_col_i = this.column;
+        var targ_cells = this.field.cells;
         var with_bomb = new Array<Cell>();
         var no_bomb = new Array<Cell>();
 
-        var neighbors = Utils.neibors_cells(this.row, this.column);
-        var targ_cells = this.field.cells;
-        for (row_i in neighbors.row_indexes) {
-            var targ_rows = targ_cells.filter(function(c) {return c.row == row_i;});
-            for (col_i in neighbors.col_indexes) {
-                var targ = targ_rows.filter(function(c) {return c.column == col_i;}).pop();
-                if (targ.bomb) with_bomb.push(targ);
-                else no_bomb.push(targ);
-            }
-        }
+        var neighbors = Utils.neibors_cells(this_row_i, this_col_i);
+        // ここでキャッシュしないとIteratorは消費されてしまうくさい
+        var col_indexes = neighbors.col_indexes.as_enumerable().list();
+        neighbors.row_indexes.as_enumerable().iter(
+                function(row_i) {
+                    var targ_rows = targ_cells.filter(function(c) {return c.row == row_i;});
+                    for (col_i in col_indexes) {
+                        // ignore cell selfs
+                        if (this_row_i == row_i && this_col_i == col_i) { continue; }
+
+                        var targ = targ_rows.filter(function(c) {return c.column == col_i;}).pop();
+                        if (targ.bomb) {
+                            with_bomb.push(targ);
+                        } else {
+                            no_bomb.push(targ);
+                        }
+                    }
+                });
         return {has_bomb: with_bomb, no_bomb: no_bomb};
     }
 }
@@ -178,10 +186,9 @@ class Utils
         var upper_row_bound = Std.int(Math.min(row_index + 1, Main.def_num_row - 1));
         var lower_column_bound = Std.int(Math.max(col_index - 1, 0));
         var upper_column_bound = Std.int(Math.min(col_index + 1, Main.def_num_col - 1));
-
         return {
-            row_indexes: lower_row_bound...upper_row_bound + 1
-            , col_indexes: lower_column_bound...upper_column_bound + 1
+            row_indexes: (lower_row_bound...(upper_row_bound + 1))
+            , col_indexes: (lower_column_bound...(upper_column_bound + 1))
         }
     }
 }
