@@ -18,8 +18,8 @@ using Lambda;
 
 class Main
 {
-    public static inline var def_num_row: Int = 10;
-    public static inline var def_num_col: Int = 10;
+    public static inline var def_num_row: Int = 20;
+    public static inline var def_num_col: Int = 20;
 
     public static function main()
     {
@@ -41,8 +41,8 @@ class Main
 
     static function initialize_canvas(canvas: js.html.CanvasElement): Void
     {
-        canvas.width = def_num_row * Field.size_of_cells;
-        canvas.height = def_num_col * Field.size_of_cells;
+        canvas.width = def_num_row * Field.size_of_cells + def_num_row;
+        canvas.height = def_num_col * Field.size_of_cells + def_num_col;
     }
 
 }
@@ -50,7 +50,7 @@ class Main
 
 class Field
 {
-    public static inline var size_of_cells: Int = 50;
+    public static inline var size_of_cells: Int = 40;
     public var cells(default, null): Array<Cell>;
     public var stage(default, null): Stage;
 
@@ -67,12 +67,11 @@ class Field
         var cells = new Array<Cell>();
         for (row in 0...x) {
             for (col in 0...y) {
-                cells.push(new Cell(this, row, col, (Std.random(2) < 0.5))); // 最大数とか考慮するのは後で
+                cells.push(new Cell(this, row, col, (Std.random(5) < 1))); // 最大数とか考慮するのは後で
             }
         }
         return cells;
     }
-
 }
 
 
@@ -84,6 +83,7 @@ class Cell
     public var row(default, null): Int;
     public var column(default, null): Int;
     public var bomb(default, null): Bool;
+    public var opened(default, default): Bool;
 
     public function new(field: Field, row, column, bomb)
     {
@@ -91,6 +91,7 @@ class Cell
         this.row = row;
         this.column = column;
         this.bomb = bomb;
+        this.opened = false;
 
         this.myshape = this.initialize_shape(field);
     }
@@ -101,27 +102,29 @@ class Cell
         var cell_scale = Field.size_of_cells;
         myshape.graphics
             .beginFill("#FF0000")
-            .drawRect(this.row * cell_scale, this.column * cell_scale, cell_scale - 1, cell_scale - 1)
+            .drawRect(this.row, this.column, cell_scale, cell_scale)
             .endFill()
             ;
+        myshape.x = this.row * cell_scale; myshape.y = this.column * cell_scale;
         myshape.onClick = function(e: MouseEvent) {
+            this.opened = true;
             if (this.bomb)
             {
-                var show_bomb = new Text('B!', '11px Monaco', '#ffffff');
-                show_bomb.x = e.stageX;
-                show_bomb.y = e.stageY;
-                this.field.stage.addChild(show_bomb);
+                this.put_picture('B!');
+                this.myshape.onClick = function(_) {return;}
                 return;
             }
+
             var neighbors = this.get_neighbors();
             var cell_status = CellStatuses.get_status(neighbors.has_bomb.length);
             if (cell_status.equals(CellStatus.Zero(0)))
             {
-                // TODO: 連鎖部分は後で
+                this.put_picture('0');
+                neighbors.no_bomb.iter(function(c) {c.open();});
             }
             else
             {
-                var bi = new Text(
+                this.put_picture(
                     switch (cell_status) {
                         case One(v): Std.string(v);
                         case Two(v): Std.string(v);
@@ -132,11 +135,9 @@ class Cell
                         case Seven(v): Std.string(v);
                         case Eight(v): Std.string(v);
                         case _: "b";
-                    }, '11px Monaco', '#ffffff');
-                bi.x = e.stageX;
-                bi.y = e.stageY;
-                this.field.stage.addChild(bi);
+                    });
             }
+            this.myshape.onClick = function(_) {return;}
         }
         field.stage.addChild(myshape);
         return myshape;
@@ -169,6 +170,43 @@ class Cell
                     }
                 });
         return {has_bomb: with_bomb, no_bomb: no_bomb};
+    }
+
+    private function put_picture(text)
+    {
+        var tex = new Text(text, '12px Monaco', '#ffffff');
+        tex.x = this.myshape.x + Field.size_of_cells * 0.5;
+        tex.y = this.myshape.y + Field.size_of_cells * 0.5;
+        this.field.stage.addChild(tex);
+    }
+
+    private function put_no_bomb()
+    {
+        this.put_picture('0');
+    }
+
+    /**
+      * ボムが0のセルから連鎖的にあける時に使われる感じのメソッド
+      * いい名前思いつかなかった
+     */
+    private function open()
+    {
+        if (this.bomb) return;
+
+        var neighbors = this.get_neighbors();
+        if (neighbors.has_bomb.empty())
+        {
+            this.opened = true;
+            this.put_no_bomb();
+            this.myshape.onClick = function(_) {};
+            neighbors.no_bomb
+                .filter(function(c) {return c.opened == false;})
+                .iter(
+                    function(c) {
+                        c.open();
+                    }
+                );
+        }
     }
 }
 
