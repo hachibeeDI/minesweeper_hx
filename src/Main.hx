@@ -75,8 +75,8 @@ class Field
 
 class Cell
 {
-    private var myshape(default, null): Shape;
     private var field(default, null): Field;
+    public var myshape(default, null): Shape;
 
     public var row(default, null): Int;
     public var column(default, null): Int;
@@ -105,11 +105,10 @@ class Cell
             ;
         myshape.x = this.row * cell_scale; myshape.y = this.column * cell_scale;
         myshape.onClick = function(e: MouseEvent) {
-            this.opened = true;
             if (this.bomb)
             {
                 this.put_picture('B!');
-                this.myshape.onClick = function(_) {return;}
+                Utils.release_bomb_event(this);
                 return;
             }
 
@@ -135,7 +134,7 @@ class Cell
                         case _: "b";
                     });
             }
-            this.myshape.onClick = function(_) {return;}
+            Utils.release_bomb_event(this);
         }
         field.stage.addChild(myshape);
         return myshape;
@@ -160,11 +159,8 @@ class Cell
                         if (this_row_i == row_i && this_col_i == col_i) { continue; }
 
                         var targ = targ_rows.filter(function(c) {return c.column == col_i;}).pop();
-                        if (targ.bomb) {
-                            with_bomb.push(targ);
-                        } else {
-                            no_bomb.push(targ);
-                        }
+                        if (targ.bomb) { with_bomb.push(targ); }
+                        else { no_bomb.push(targ); }
                     }
                 });
         return {has_bomb: with_bomb, no_bomb: no_bomb};
@@ -194,9 +190,8 @@ class Cell
         var neighbors = this.get_neighbors();
         if (neighbors.has_bomb.empty())
         {
-            this.opened = true;
             this.put_no_bomb();
-            this.myshape.onClick = function(_) {};
+            Utils.release_bomb_event(this);
             neighbors.no_bomb
                 .filter(function(c) {return c.opened == false;})
                 .iter(
@@ -226,6 +221,12 @@ class Utils
             row_indexes: (lower_row_bound...(upper_row_bound + 1))
             , col_indexes: (lower_column_bound...(upper_column_bound + 1))
         }
+    }
+
+    public static function release_bomb_event(cell: Cell)
+    {
+        cell.opened = true;
+        cell.myshape.onClick = function(_) {return;};
     }
 }
 
