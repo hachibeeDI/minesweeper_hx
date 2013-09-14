@@ -73,6 +73,9 @@ Lambda.fold = function(it,f,first) {
 	}
 	return first;
 }
+Lambda.empty = function(it) {
+	return !$iterator(it)().hasNext();
+}
 Lambda.concat = function(a,b) {
 	var l = new List();
 	var $it0 = $iterator(a)();
@@ -119,15 +122,15 @@ Main.init_window_handler = function(_) {
 	Main.initialize_canvas(canvas);
 	var stage = new createjs.Stage(canvas);
 	createjs.Ticker.useRAF = true;
-	createjs.Ticker.setFPS(60);
+	createjs.Ticker.setFPS(30);
 	createjs.Ticker.addListener(function() {
 		stage.update();
 	});
-	var field = new Field(10,10,stage);
+	var field = new Field(20,20,stage);
 }
 Main.initialize_canvas = function(canvas) {
-	canvas.width = 500;
-	canvas.height = 500;
+	canvas.width = 820;
+	canvas.height = 820;
 }
 var Field = function(x,y,stage) {
 	this.stage = stage;
@@ -144,7 +147,7 @@ Field.prototype = {
 			var _g1 = 0;
 			while(_g1 < y) {
 				var col = _g1++;
-				cells.push(new Cell(this,row,col,Std.random(2) < 0.5));
+				cells.push(new Cell(this,row,col,Std.random(5) < 1));
 			}
 		}
 		return cells;
@@ -155,11 +158,34 @@ var Cell = function(field,row,column,bomb) {
 	this.row = row;
 	this.column = column;
 	this.bomb = bomb;
+	this.opened = false;
 	this.myshape = this.initialize_shape(field);
 };
 Cell.__name__ = true;
 Cell.prototype = {
-	get_neighbors: function() {
+	open: function() {
+		if(this.bomb) return;
+		var neighbors = this.get_neighbors();
+		if(Lambda.empty(neighbors.has_bomb)) {
+			this.put_no_bomb();
+			Utils.release_bomb_event(this);
+			Lambda.iter(neighbors.no_bomb.filter(function(c) {
+				return c.opened == false;
+			}),function(c) {
+				c.open();
+			});
+		}
+	}
+	,put_no_bomb: function() {
+		this.put_picture("0");
+	}
+	,put_picture: function(text) {
+		var tex = new createjs.Text(text,"12px Monaco","#ffffff");
+		tex.x = this.myshape.x + 20.;
+		tex.y = this.myshape.y + 20.;
+		this.field.stage.addChild(tex);
+	}
+	,get_neighbors: function() {
 		var this_row_i = this.row;
 		var this_col_i = this.column;
 		var targ_cells = this.field.cells;
@@ -181,7 +207,6 @@ Cell.prototype = {
 						return c.column == col_i1[0];
 					};
 				})(col_i1)).pop();
-				console.log("" + row_i + ", " + col_i1[0] + " -> " + Std.string(targ.bomb));
 				if(targ.bomb) with_bomb.push(targ); else no_bomb.push(targ);
 			}
 		});
@@ -190,66 +215,65 @@ Cell.prototype = {
 	,initialize_shape: function(field) {
 		var _g = this;
 		var myshape = new createjs.Shape();
-		var cell_scale = 50;
-		myshape.graphics.beginFill("#FF0000").drawRect(this.row * cell_scale,this.column * cell_scale,cell_scale - 1,cell_scale - 1).endFill();
+		var cell_scale = 40;
+		myshape.graphics.beginFill("#FF0000").drawRect(this.row,this.column,cell_scale,cell_scale).endFill();
+		myshape.x = this.row * cell_scale;
+		myshape.y = this.column * cell_scale;
 		myshape.onClick = function(e) {
 			if(_g.bomb) {
-				var show_bomb = new createjs.Text("B!","11px Monaco","#ffffff");
-				show_bomb.x = e.stageX;
-				show_bomb.y = e.stageY;
-				_g.field.stage.addChild(show_bomb);
+				_g.put_picture("B!");
+				Utils.release_bomb_event(_g);
 				return;
 			}
 			var neighbors = _g.get_neighbors();
 			var cell_status = CellStatuses.get_status(neighbors.has_bomb.length);
-			console.log("" + neighbors.has_bomb.length + " bomb");
 			if(Type.enumEq(cell_status,CellStatus.Zero(0))) {
-			} else {
-				var bi = new createjs.Text((function($this) {
-					var $r;
-					var $e = (cell_status);
-					switch( $e[1] ) {
-					case 1:
-						var v = $e[2];
-						$r = Std.string(v);
-						break;
-					case 2:
-						var v = $e[2];
-						$r = Std.string(v);
-						break;
-					case 3:
-						var v = $e[2];
-						$r = Std.string(v);
-						break;
-					case 4:
-						var v = $e[2];
-						$r = Std.string(v);
-						break;
-					case 5:
-						var v = $e[2];
-						$r = Std.string(v);
-						break;
-					case 6:
-						var v = $e[2];
-						$r = Std.string(v);
-						break;
-					case 7:
-						var v = $e[2];
-						$r = Std.string(v);
-						break;
-					case 8:
-						var v = $e[2];
-						$r = Std.string(v);
-						break;
-					default:
-						$r = "b";
-					}
-					return $r;
-				}(this)),"11px Monaco","#ffffff");
-				bi.x = e.stageX;
-				bi.y = e.stageY;
-				_g.field.stage.addChild(bi);
-			}
+				_g.put_picture("0");
+				Lambda.iter(neighbors.no_bomb,function(c) {
+					c.open();
+				});
+			} else _g.put_picture((function($this) {
+				var $r;
+				var $e = (cell_status);
+				switch( $e[1] ) {
+				case 1:
+					var v = $e[2];
+					$r = Std.string(v);
+					break;
+				case 2:
+					var v = $e[2];
+					$r = Std.string(v);
+					break;
+				case 3:
+					var v = $e[2];
+					$r = Std.string(v);
+					break;
+				case 4:
+					var v = $e[2];
+					$r = Std.string(v);
+					break;
+				case 5:
+					var v = $e[2];
+					$r = Std.string(v);
+					break;
+				case 6:
+					var v = $e[2];
+					$r = Std.string(v);
+					break;
+				case 7:
+					var v = $e[2];
+					$r = Std.string(v);
+					break;
+				case 8:
+					var v = $e[2];
+					$r = Std.string(v);
+					break;
+				default:
+					$r = "b";
+				}
+				return $r;
+			}(this)));
+			Utils.release_bomb_event(_g);
 		};
 		field.stage.addChild(myshape);
 		return myshape;
@@ -259,14 +283,16 @@ var Utils = function() { }
 Utils.__name__ = true;
 Utils.neibors_cells = function(row_index,col_index) {
 	var lower_row_bound = Math.max(row_index - 1,0) | 0;
-	var upper_row_bound = Math.min(row_index + 1,9) | 0;
+	var upper_row_bound = Math.min(row_index + 1,19) | 0;
 	var lower_column_bound = Math.max(col_index - 1,0) | 0;
-	var upper_column_bound = Math.min(col_index + 1,9) | 0;
-	console.log("row lower: " + lower_row_bound);
-	console.log("row upper: " + upper_row_bound);
-	console.log("col lower: " + lower_column_bound);
-	console.log("col upper: " + upper_column_bound);
+	var upper_column_bound = Math.min(col_index + 1,19) | 0;
 	return { row_indexes : new IntIterator(lower_row_bound,upper_row_bound + 1), col_indexes : new IntIterator(lower_column_bound,upper_column_bound + 1)};
+}
+Utils.release_bomb_event = function(cell) {
+	cell.opened = true;
+	cell.myshape.onClick = function(_) {
+		return;
+	};
 }
 var CellStatus = { __ename__ : true, __constructs__ : ["Zero","One","Two","Three","Four","Five","Six","Seven","Eight"] }
 CellStatus.Zero = function(i) { var $x = ["Zero",0,i]; $x.__enum__ = CellStatus; $x.toString = $estr; return $x; }
@@ -433,9 +459,9 @@ Math.isNaN = function(i) {
 };
 String.__name__ = true;
 Array.__name__ = true;
-Main.def_num_row = 10;
-Main.def_num_col = 10;
-Field.size_of_cells = 50;
+Main.def_num_row = 20;
+Main.def_num_col = 20;
+Field.size_of_cells = 40;
 js.Browser.window = typeof window != "undefined" ? window : null;
 js.Browser.document = typeof window != "undefined" ? window.document : null;
 Main.main();
